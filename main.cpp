@@ -213,6 +213,71 @@ string infix_to_postfix(const string& infix) {
 
     return postfix.str();
 }
+
+double evaluate_postfix(const string& postfix) {
+    Stack<double> values;
+    istringstream iss(postfix);
+    string token;
+
+    while (iss >> token) {
+        if (token[0] == '-' && token.size() > 1 && isdigit(token[1])) {
+            values.push(-stod(token.substr(1)));
+        } else if (token == "0" && !values.empty() && values.top() == 0) {
+            continue;
+        } else if (token == "(") {
+            string nextToken;
+            iss >> nextToken;
+            if (nextToken[0] == '-' && nextToken.size() > 1 && isdigit(nextToken[1])) {
+                values.push(-stod(nextToken.substr(1)));
+            } else {
+                values.push(stod(nextToken));
+            }
+        } else if (is_operator(token[0])) {
+            if (token == "!") {
+                if (values.empty()) {
+                    throw runtime_error("Not enough operands");
+                }
+                double a = values.top();
+                values.pop();
+                values.push(factorial(a));
+            } else if (token[0] == '^') {
+                if (values.size() < 2) {
+                    throw runtime_error("Not enough operands");
+                }
+                double b = values.top();
+                values.pop();
+                double a = values.top();
+                values.pop();
+                values.push(pow(a, b));
+            } else if (token[0] == 's' || token[0] == 'c' || token[0] == 't' ||
+                       token[0] == 'l' || token[0] == 'q' || token[0] == 'x' ) {
+                if (values.empty()) {
+                    throw runtime_error("Not enough operands");
+                }
+                double a = values.top();
+                values.pop();
+                values.push(apply_operator(token[0], a, 0));
+            } else {
+                if (values.size() < 2) {
+                    throw runtime_error("Not enough operands");
+                }
+                double b = values.top();
+                values.pop();
+                double a = values.top();
+                values.pop();
+                values.push(apply_operator(token[0], a, b));
+            }
+        } else {
+            values.push(stod(token));}
+    }
+
+    if (values.size() != 1) {
+        throw runtime_error("Invalid expression");
+    }
+
+    return values.top();
+}
+
 int main() {
     string infix;
     while (true) {
@@ -220,7 +285,10 @@ int main() {
         getline(cin, infix);
         if (infix == "q") break;
         try {
-            cout<< infix_to_postfix(infix);
+            string postfix = infix_to_postfix(infix);
+
+            double result = evaluate_postfix(postfix);
+            cout << "Result: " << result << endl;
         } catch (const runtime_error& e) {
             cout << "Error: " << e.what() << endl;
         }
