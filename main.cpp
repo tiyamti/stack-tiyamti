@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <sstream>
 using namespace std;
 const double pi = M_PI;
 template <typename T>
@@ -148,8 +149,81 @@ double apply_operator(char op, double a, double b) {
         default: throw runtime_error("Unknown operator");
     }
 }
+string infix_to_postfix(const string& infix) {
+    Stack<char> ops;
+    ostringstream postfix;
+    bool lastWasOperator = true;
 
+    for (size_t i = 0; i < infix.size(); ++i) {
+        char c = infix[i];
+
+        if (isspace(c)) {
+            continue;
+        } else if (isdigit(c) || c == '.' || (c == '-' && lastWasOperator)) {
+            postfix << c;
+            if (i == infix.size() - 1 || (!isdigit(infix[i + 1]) && infix[i + 1] != '.')) {
+                postfix << ' ';
+            }
+            lastWasOperator = false;
+        } else if (c == '(') {
+            ops.push(c);
+            lastWasOperator = true;
+        } else if (c == ')') {
+            while (!ops.empty() && ops.top() != '(') {
+                postfix << ops.top() << ' ';
+                ops.pop();
+            }
+            if (ops.empty() || ops.top() != '(') {
+                throw runtime_error("Mismatched parentheses");
+            }
+            ops.pop();
+            lastWasOperator = false;
+        } else if (is_operator(c)) {
+            if ((c == 's' || c == 'c' || c == 't' || c == 'l' || c == 'q' || c == 'x') &&
+                (i + 1 < infix.size() && infix[i + 1] == '(')) {
+                ops.push(c);
+                lastWasOperator = true;
+            } else {
+                while (!ops.empty() && precedence(ops.top()) >= precedence(c)) {
+                    postfix << ops.top() << ' ';
+                    ops.pop();
+                }
+                ops.push(c);
+                lastWasOperator = true;
+            }
+        } else if (c == 'e') {
+            postfix << "2.718281828459045 ";
+            lastWasOperator = false;
+        } else if (c == 'p' && i + 1 < infix.size() && infix[i + 1] == 'i') {
+            postfix << pi << ' ';
+            ++i;
+            lastWasOperator = false;
+        } else {
+            throw runtime_error("Invalid character");
+        }
+    }
+
+    while (!ops.empty()) {
+        if (ops.top() == '(') {
+            throw runtime_error("Mismatched parentheses");
+        }
+        postfix << ops.top() << ' ';
+        ops.pop();
+    }
+
+    return postfix.str();
+}
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    string infix;
+    while (true) {
+        cout << "Enter an expression (or 'q' to quit): ";
+        getline(cin, infix);
+        if (infix == "q") break;
+        try {
+            cout<< infix_to_postfix(infix);
+        } catch (const runtime_error& e) {
+            cout << "Error: " << e.what() << endl;
+        }
+    }
     return 0;
 }
